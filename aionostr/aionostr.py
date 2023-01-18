@@ -12,6 +12,9 @@ except ImportError:
 
 
 class Relay:
+    """
+    Interact with a relay
+    """
     def __init__(self, url, verbose=False):
         self.url = url
         self.ws = None
@@ -73,6 +76,9 @@ class Relay:
 
 
 class RelayManager:
+    """
+    Manage a collection of relays
+    """
     def __init__(self, relays=None, verbose=False):
         self.relays = [Relay(r, verbose=verbose) for r in (relays or [])]
         self.subscriptions = {}
@@ -180,7 +186,12 @@ async def get_anything(anything:str, relays=None, verbose=False):
         return events
 
 
-async def add_event(relays, event=None, private_key='', kind=1, pubkey='', content='', created_at=None, tags=None):
+async def add_event(relays, event:dict=None, private_key='', kind=1, pubkey='', content='', created_at=None, tags=None):
+    """
+    Add an event to the network, using the given relays
+    event can be specified (as a dict)
+    or will be created from the passed in parameters
+    """
     if not event:
         created_at = created_at or int(time.time())
         tags = tags or []
