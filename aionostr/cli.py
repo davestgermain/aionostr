@@ -67,15 +67,21 @@ async def get(anyid, relays, verbose):
 @click.option('-v', '--verbose', help='verbose results', is_flag=True, default=False)
 @click.option('--content', default='', help='content')
 @click.option('--kind', default=1, help='kind')
-@click.option('--created_at', default=int(time.time()), help='created_at')
-@click.option('--pubkey', default='', help='pubkey')
+@click.option('--created', default=int(time.time()), help='created_at')
+@click.option('--pubkey', default='', help='public key')
 @click.option('--tags', default='[]', help='tags')
+@click.option('--private-key', default='', help='private key')
 @async_cmd
-async def send(content, kind, created_at, tags, pubkey, relays, verbose):
+async def send(content, kind, created, tags, pubkey, relays, private_key, verbose):
+    """
+    Send an event to the network
+
+    private key can be set using environment variable NOSTR_KEY
+    """
     import json, os
     from .util import to_nip19
     tags = json.loads(tags)
-    private_key = os.getenv('NOSTR_KEY', '')
+    private_key = private_key or os.getenv('NOSTR_KEY', '')
     if not sys.stdin.isatty():
         event = json.loads(sys.stdin.readline())
     else:
@@ -85,7 +91,7 @@ async def send(content, kind, created_at, tags, pubkey, relays, verbose):
         event=event,
         pubkey=pubkey,
         private_key=private_key,
-        created_at=created_at,
+        created_at=created,
         kind=kind,
         content=content,
         tags=tags,
@@ -96,18 +102,22 @@ async def send(content, kind, created_at, tags, pubkey, relays, verbose):
 
 @main.command()
 @click.argument("ntype")
-@click.argument("event_id")
+@click.argument("obj_id")
 @click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)
-def make_nip19(ntype, event_id, relays):
+def make_nip19(ntype, obj_id, relays):
     """
+    Create nip-19 string for given object id
     """
     from .util import to_nip19
-    obj = to_nip19(ntype, event_id, relays=relays)
+    obj = to_nip19(ntype, obj_id, relays=relays)
     click.echo(obj)
 
 
 @main.command()
 def gen():
+    """
+    Generate a private/public key pair
+    """
     from nostr.key import PrivateKey
     from .util import to_nip19
 
