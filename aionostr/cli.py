@@ -5,7 +5,7 @@ import asyncio
 import time
 import os
 from functools import wraps
-from aionostr.aionostr import get_anything, add_event
+from . import get_anything, add_event
 
 DEFAULT_RELAYS = os.getenv('NOSTR_RELAYS', 'wss://nostr-pub.wellorder.net,wss://brb.io,wss://relay.damus.io').split(',')
 
