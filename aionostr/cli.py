@@ -29,6 +29,7 @@ def main(args=None):
 @main.command()
 @click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)
 @click.option('-s', '--stream', help='stream results', is_flag=True, default=False)
+@click.option('-v', '--verbose', help='verbose results', is_flag=True, default=False)
 @click.option('-q', '--query', help='query json')
 @click.option('--ids', help='ids')
 @click.option('--authors', help='authors')
@@ -39,7 +40,7 @@ def main(args=None):
 @click.option('--until', help='until')
 @click.option('--limit', help='limit')
 @async_cmd
-async def query(ids, authors, kinds, etags, ptags, since, until, limit, query, relays, stream):
+async def query(ids, authors, kinds, etags, ptags, since, until, limit, query, relays, stream, verbose):
     """
     Run a query once and print events
     """
@@ -69,9 +70,21 @@ async def query(ids, authors, kinds, etags, ptags, since, until, limit, query, r
     if not query:
         click.echo("some type of query is required")
         return -1
-    async for obj in get_anything(query, relays, only_stored=not stream):
-        click.echo(obj)
+    await _get(query, relays, verbose=verbose, stream=stream)
 
+
+
+async def _get(anything, relays, verbose=False, stream=False):
+    response = await get_anything(anything, relays, verbose=verbose, stream=stream)
+    if isinstance(response, str):
+        click.echo(response)
+    elif isinstance(response, asyncio.Queue):
+        while True:
+            event = await response.get()
+            click.echo(event)
+    else:
+        for event in response:
+            click.echo(event)
 
 
 @main.command()
@@ -83,8 +96,7 @@ async def get(anything, relays, verbose, stream=False):
     """
     Get any nostr event
     """
-    async for obj in get_anything(anything, relays, verbose=verbose, only_stored=not stream):
-        click.echo(obj)
+    await _get(anything, relays, verbose=verbose, stream=stream)
 
 
 @main.command()

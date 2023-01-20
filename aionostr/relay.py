@@ -15,7 +15,7 @@ class Relay:
     """
     Interact with a relay
     """
-    def __init__(self, url, verbose=False):
+    def __init__(self, url, verbose=False, origin:str = ''):
         self.url = url
         self.ws = None
         self.receive_task = None
@@ -24,9 +24,10 @@ class Relay:
         self.notices = asyncio.Queue()
         self.challenge = None
         self.verbose = verbose
+        self.origin = origin or url
 
     async def connect(self):
-        self.ws = await connect(self.url, origin=self.url)
+        self.ws = await connect(self.url, origin=self.origin)
         self.receive_task = asyncio.create_task(self._receive_messages())
         await asyncio.sleep(0.01)
 

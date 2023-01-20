@@ -8,12 +8,16 @@ import time
 from .relay import Manager, Relay
 
 
-async def get_anything(anything:str, relays=None, verbose=False, only_stored=True):
+async def get_anything(anything:str, relays=None, verbose=False, stream=False):
     """
     Return anything from the nostr network
     anything: event id, nprofile, nevent, npub, nsec, or query
+
+    To stream events, set stream=True. This will return an asyncio.Queue to
+    retrieve events from
     """
     from .util import from_nip19
+
     query = None
     single_event = False
     if isinstance(anything, list):
@@ -28,7 +32,7 @@ async def get_anything(anything:str, relays=None, verbose=False, only_stored=Tru
     elif anything.startswith(('nprofile', 'nevent', 'npub', 'nsec')):
         obj = from_nip19(anything)
         if not isinstance(obj, tuple):
-            yield obj.hex()
+            return obj.hex()
         else:
             relays = obj[2] or relays
             if obj[0] == 'nprofile':
@@ -45,9 +49,19 @@ async def get_anything(anything:str, relays=None, verbose=False, only_stored=Tru
     if query:
         if not relays:
             raise NotImplementedError("No relays to use")
-        async with Manager(relays, verbose=verbose) as man:
-            async for event in man.get_events(query, single_event=single_event, only_stored=only_stored):
-                yield event
+
+        if not stream:
+            async with Manager(relays, verbose=verbose) as man:
+                return [event async for event in man.get_events(query, single_event=single_event, only_stored=True)]
+        else:
+            import asyncio
+            queue = asyncio.Queue()
+            async def _task():
+                async with Manager(relays, verbose=verbose) as man:
+                    async for event in man.get_events(query, single_event=single_event, only_stored=False):
+                        await queue.put(event)
+            asyncio.create_task(_task())
+            return queue
 
 
 async def add_event(relays, event:dict=None, private_key='', kind=1, pubkey='', content='', created_at=None, tags=None, verbose=False):
