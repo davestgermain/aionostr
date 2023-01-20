@@ -3,6 +3,10 @@ from . import bech32
 
 
 def from_nip19(nip19string: str):
+    """
+    Decode nip-19 formatted string into:
+    private key, public key, event id or profile public key
+    """
     hrp, data, spec = bech32.bech32_decode(nip19string)
     data = bech32.convertbits(data, 5, 8)
     if hrp == 'npub':
@@ -30,6 +34,9 @@ def from_nip19(nip19string: str):
 
 
 def to_nip19(ntype: str, payload: str, relays=None):
+    """
+    Encode object as nip-19 compatible string
+    """
     if ntype in ('npub', 'nsec'):
         data = bytes.fromhex(payload)
     elif ntype in ('nprofile', 'nevent'):

@@ -25,12 +25,13 @@ class EventKind(IntEnum):
     ENCRYPTED_DIRECT_MESSAGE = 4
     DELETE = 5
 
+
 class Event:
     def __init__(
             self,
             pubkey: str='', 
             content: str='', 
-            created_at: int=int(time.time()), 
+            created_at: int=0, 
             kind: int=EventKind.TEXT_NOTE, 
             tags: "list[list[str]]"=[], 
             id: str=None,
@@ -40,12 +41,12 @@ class Event:
         
         self.pubkey = pubkey
         self.content = content
-        self.created_at = created_at
-        self.kind = kind
+        self.created_at = created_at or int(time.time())
+        self.kind = int(kind)
         self.tags = tags
         self.sig = sig
         if not id:
-            id = Event.compute_id(pubkey, created_at, kind, tags, content)
+            id = Event.compute_id(self.pubkey, self.created_at, self.kind, self.tags, self.content)
         self.id = id
 
     @property

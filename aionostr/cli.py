@@ -3,11 +3,11 @@ import sys
 import click
 import asyncio
 import time
+import os
 from functools import wraps
-from aionostr.aionostr import RelayManager, get_anything, add_event
+from aionostr.aionostr import get_anything, add_event
 
-
-DEFAULT_RELAYS = ['wss://brb.io', 'wss://relay.damus.io']
+DEFAULT_RELAYS = os.getenv('NOSTR_RELAYS', 'wss://nostr-pub.wellorder.net,wss://brb.io,wss://relay.damus.io').split(',')
 
 
 def async_cmd(func):
@@ -27,38 +27,63 @@ def main(args=None):
 
 
 @main.command()
-@click.argument("query")
 @click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)
 @click.option('-s', '--stream', help='stream results', is_flag=True, default=False)
+@click.option('-q', '--query', help='query json')
+@click.option('--ids', help='ids')
+@click.option('--authors', help='authors')
+@click.option('--kinds', help='kinds')
+@click.option('--etags', help='etags')
+@click.option('--ptags', help='ptags')
+@click.option('--since', help='since')
+@click.option('--until', help='until')
+@click.option('--limit', help='limit')
 @async_cmd
-async def query(query, relays, stream):
+async def query(ids, authors, kinds, etags, ptags, since, until, limit, query, relays, stream):
     """
     Run a query once and print events
     """
     import json
-    query = json.loads(query)
-    async with RelayManager(relays) as man:
-        try:
-            async for event in man.get_events(query, only_stored=not stream):
-                print(event)
-        except KeyboardInterrupt:
-            return 0
+    if not sys.stdin.isatty():
+        query = json.loads(sys.stdin.readline())
+    elif query:
+        query = json.loads(query)
+    else:
+        query = {}
+        if ids:
+            query['ids'] = ids.split(',')
+        if authors:
+            query['authors'] = authors.split(',')
+        if kinds:
+            query['kinds'] = [int(k) for k in kinds.split(',')]
+        if etags:
+            query['#e'] = etags.split(',')
+        if ptags:
+            query['#p'] = ptags.split(',')
+        if since:
+            query['since'] = int(since)
+        if until:
+            query['until'] = int(until)
+        if limit:
+            query['limit'] = int(limit)
+    if not query:
+        click.echo("some type of query is required")
+        return -1
+    async for obj in get_anything(query, relays, only_stored=not stream):
+        click.echo(obj)
+
 
 
 @main.command()
-@click.argument("anyid")
+@click.argument("anything")
 @click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)
 @click.option('-v', '--verbose', help='verbose results', is_flag=True, default=False)
 @async_cmd
-async def get(anyid, relays, verbose):
+async def get(anything, relays, verbose, stream=False):
     """
     Get any nostr event
     """
-    response = await get_anything(anyid, relays, verbose=verbose)
-    if isinstance(response, list):
-        for obj in response:
-            click.echo(obj)
-    else:
+    async for obj in get_anything(anything, relays, verbose=verbose, only_stored=not stream):
         click.echo(obj)
 
 
@@ -66,8 +91,8 @@ async def get(anyid, relays, verbose):
 @click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)
 @click.option('-v', '--verbose', help='verbose results', is_flag=True, default=False)
 @click.option('--content', default='', help='content')
-@click.option('--kind', default=1, help='kind')
-@click.option('--created', default=int(time.time()), help='created_at')
+@click.option('--kind', default=20000, help='kind', type=int)
+@click.option('--created', default=int(time.time()), type=int, help='created_at')
 @click.option('--pubkey', default='', help='public key')
 @click.option('--tags', default='[]', help='tags')
 @click.option('--private-key', default='', help='private key')
@@ -78,7 +103,7 @@ async def send(content, kind, created, tags, pubkey, relays, private_key, verbos
 
     private key can be set using environment variable NOSTR_KEY
     """
-    import json, os
+    import json
     from .util import to_nip19
     tags = json.loads(tags)
     private_key = private_key or os.getenv('NOSTR_KEY', '')
@@ -91,10 +116,11 @@ async def send(content, kind, created, tags, pubkey, relays, private_key, verbos
         event=event,
         pubkey=pubkey,
         private_key=private_key,
-        created_at=created,
+        created_at=int(created),
         kind=kind,
         content=content,
         tags=tags,
+        verbose=verbose,
     )
     click.echo(event_id)
     click.echo(to_nip19('nevent', event_id, relays))
