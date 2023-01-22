@@ -8,7 +8,7 @@ import time
 from .relay import Manager, Relay
 
 
-async def get_anything(anything:str, relays=None, verbose=False, stream=False):
+async def get_anything(anything:str, relays=None, verbose=False, stream=False, origin='aionostr'):
     """
     Return anything from the nostr network
     anything: event id, nprofile, nevent, npub, nsec, or query
@@ -28,6 +28,7 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False):
     elif isinstance(anything, dict):
         query = anything
     elif anything.strip().startswith('{'):
+        from json import loads
         query = loads(anything)
     elif anything.startswith(('nprofile', 'nevent', 'npub', 'nsec')):
         obj = from_nip19(anything)
@@ -50,14 +51,15 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False):
         if not relays:
             raise NotImplementedError("No relays to use")
 
+        man = Manager(relays, verbose=verbose, origin=origin)
         if not stream:
-            async with Manager(relays, verbose=verbose) as man:
+            async with man:
                 return [event async for event in man.get_events(query, single_event=single_event, only_stored=True)]
         else:
             import asyncio
             queue = asyncio.Queue()
             async def _task():
-                async with Manager(relays, verbose=verbose) as man:
+                async with man:
                     async for event in man.get_events(query, single_event=single_event, only_stored=False):
                         await queue.put(event)
             asyncio.create_task(_task())

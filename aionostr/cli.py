@@ -139,6 +139,34 @@ async def send(content, kind, created, tags, pubkey, relays, private_key, verbos
 
 
 @main.command()
+@click.argument("anything")
+@click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)
+@click.option('-v', '--verbose', help='verbose results', is_flag=True, default=False)
+@click.option('-t', '--target', help='target relay', required=True)
+@async_cmd
+async def mirror(anything, relays, target, verbose):
+    """
+    Mirror a query from source relays to the target relay
+    """
+    if verbose:
+        click.echo(f'mirroring: {anything} from {relays} to {target}')
+    from . import Manager
+    async with Manager([target]) as man:
+        result_queue = await get_anything(anything, relays=relays, verbose=verbose, stream=True)
+        count = 0
+        while True:
+            event = await result_queue.get()
+            await man.add_event(event, check_response=True)
+            count += 1
+            if verbose:
+                click.echo(f'{event.id} from {event.pubkey}')
+            else:
+                if count % 100 == 0:
+                    click.echo(f'{count}...')
+        click.echo(f'{count} sent')
+
+
+@main.command()
 @click.argument("ntype")
 @click.argument("obj_id")
 @click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)

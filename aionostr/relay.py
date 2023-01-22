@@ -108,8 +108,8 @@ class Manager:
     """
     Manage a collection of relays
     """
-    def __init__(self, relays=None, verbose=False):
-        self.relays = [Relay(r, verbose=verbose) for r in (relays or [])]
+    def __init__(self, relays=None, verbose=False, origin='aionostr'):
+        self.relays = [Relay(r, verbose=verbose, origin=origin) for r in (relays or [])]
         self.subscriptions = {}
 
     def add(self, url):
@@ -145,8 +145,8 @@ class Manager:
     async def close(self):
         await self.broadcast('close')
 
-    async def add_event(self, event):
-        await self.broadcast('add_event', event)
+    async def add_event(self, event, check_response=False):
+        await self.broadcast('add_event', event, check_response=check_response)
 
     async def authenticate(self, private_key:str):
         await self.broadcast('authenticate', private_key)
