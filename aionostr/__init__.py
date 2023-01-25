@@ -67,27 +67,32 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
             return queue
 
 
-async def add_event(relays, event:dict=None, private_key='', kind=1, pubkey='', content='', created_at=None, tags=None, verbose=False):
+async def add_event(relays, event:dict=None, private_key='', kind=1, pubkey='', content='', created_at=None, tags=None, direct_message='', verbose=False):
     """
     Add an event to the network, using the given relays
     event can be specified (as a dict)
     or will be created from the passed in parameters
     """
     if not event:
+        from nostr.key import PrivateKey
         from .event import Event
+        from .util import from_nip19
         created_at = created_at or int(time.time())
         tags = tags or []
-        from nostr.key import PrivateKey
         if not private_key:
             raise Exception("Missing private key")
 
         if private_key.startswith('nsec'):
-            from .util import from_nip19
             private_key = from_nip19(private_key).hex()
         prikey = PrivateKey(bytes.fromhex(private_key))
 
         if not pubkey:
             pubkey = prikey.public_key.hex()
+        if direct_message:
+            dm_pubkey = from_nip19(direct_message).hex() if direct_message.startswith('npub') else direct_message
+            tags.append(['p', dm_pubkey])
+            kind = 4
+            content = prikey.encrypt_message(content, dm_pubkey)
         event = Event(pubkey=pubkey, content=content, created_at=created_at, tags=tags, kind=kind)
         event.sign(prikey.hex())
         event_id = event.id

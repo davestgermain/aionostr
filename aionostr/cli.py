@@ -108,8 +108,9 @@ async def get(anything, relays, verbose, stream=False):
 @click.option('--pubkey', default='', help='public key')
 @click.option('--tags', default='[]', help='tags')
 @click.option('--private-key', default='', help='private key')
+@click.option('--dm', default='', help='pubkey to send dm')
 @async_cmd
-async def send(content, kind, created, tags, pubkey, relays, private_key, verbose):
+async def send(content, kind, created, tags, pubkey, relays, private_key, dm, verbose):
     """
     Send an event to the network
 
@@ -132,6 +133,7 @@ async def send(content, kind, created, tags, pubkey, relays, private_key, verbos
         kind=kind,
         content=content,
         tags=tags,
+        direct_message=dm,
         verbose=verbose,
     )
     click.echo(event_id)
