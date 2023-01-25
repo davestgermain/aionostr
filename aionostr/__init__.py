@@ -30,7 +30,8 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
     elif anything.strip().startswith('{'):
         from json import loads
         query = loads(anything)
-    elif anything.startswith(('nprofile', 'nevent', 'npub', 'nsec')):
+    elif anything.startswith(('nprofile', 'nevent', 'npub', 'nsec', 'nostr:')):
+        anything = anything.replace('nostr:', '', 1)
         obj = from_nip19(anything)
         if not isinstance(obj, tuple):
             return obj.hex()
