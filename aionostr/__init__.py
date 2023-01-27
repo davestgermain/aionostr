@@ -30,7 +30,7 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
     elif anything.strip().startswith('{'):
         from json import loads
         query = loads(anything)
-    elif anything.startswith(('nprofile', 'nevent', 'npub', 'nsec', 'nostr:')):
+    elif anything.startswith(('nprofile', 'nevent', 'npub', 'nsec', 'nostr:', 'nrelay')):
         anything = anything.replace('nostr:', '', 1)
         obj = from_nip19(anything)
         if not isinstance(obj, tuple):
@@ -39,9 +39,11 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
             relays = obj[2] or relays
             if obj[0] == 'nprofile':
                 query = {"kinds": [0], "authors": [obj[1]]}
-            else:
+            elif obj[1]:
                 query = {"ids": [obj[1]]}
                 single_event = True
+            else:
+                return relays
     else:
         query = {"ids": [anything]}
         single_event = True
