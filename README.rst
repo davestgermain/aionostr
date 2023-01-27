@@ -34,8 +34,12 @@ Features
         $ aionostr get -v nevent1qqsxpnzhw2ddf2uplsxgc5ctr9h6t65qaalzvzf0hvljwrz8q64637spp3mhxue69uhkyunz9e5k75j6gxm
         $ aionostr query -s -q '{"kinds": [1], "limit":10}'
         $ aionostr send --kind 1 --content test --private-key <privatekey>
+        $ aionostr mirror -r wss://source.relay -t wss://target.relay --verbose '{"kinds": [4]}'
 
-Set environment variables::
+Set environment variables:
+
+.. code-block:: console
+
         NOSTR_RELAYS=wss://brb.io,wss://nostr.mom
         NOSTR_KEY=`aionostr gen | head -1`
 
