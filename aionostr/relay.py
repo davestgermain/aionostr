@@ -152,6 +152,8 @@ class Manager:
     def __init__(self, relays=None, verbose=False, origin='aionostr'):
         self.relays = [Relay(r, verbose=verbose, origin=origin) for r in (relays or [])]
         self.subscriptions = {}
+        self.connected = False
+        self._connectlock = asyncio.Lock()
 
     def add(self, url):
         self.relays.append(Relay(url))
@@ -181,7 +183,10 @@ class Manager:
         return results
 
     async def connect(self):
-        await self.broadcast('connect')
+        async with self._connectlock:
+            if not self.connected:
+                await self.broadcast('connect')
+                self.connected = True
 
     async def close(self):
         await self.broadcast('close')

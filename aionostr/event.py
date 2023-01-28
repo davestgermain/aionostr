@@ -120,6 +120,13 @@ class Event:
                     return False
         return verified
 
+    def to_message(self, sub_id: str=None):
+        message = ['EVENT']
+        if sub_id:
+            message.append(sub_id)
+        message.append(self.to_json_object())
+        return dumps(message)
+
     def to_tuple(self):
         return (
             self.id,
