@@ -122,7 +122,7 @@ class Relay:
     async def authenticate(self, private_key:str):
         if not self.challenge:
             return False
-        from nostr.key import PrivateKey
+        from .key import PrivateKey
         pk = PrivateKey(bytes.fromhex(private_key))
         auth_event = Event(
             kind=22242,

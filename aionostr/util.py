@@ -1,5 +1,4 @@
-from nostr.key import PublicKey, PrivateKey
-from . import bech32
+from .key import PublicKey, PrivateKey, bech32
 
 
 def from_nip19(nip19string: str):

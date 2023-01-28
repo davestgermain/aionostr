@@ -10,7 +10,14 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click>=7.0', 'websockets', 'nostr']
+requirements = [
+    "Click>=7.0",
+    "websockets",
+    "cffi>=1.15.0",
+    "cryptography>=37.0.4",
+    "pycparser>=2.21",
+    "secp256k1>=0.14.0",
+]
 
 test_requirements = ['pytest>=3', ]
 

@@ -78,7 +78,7 @@ async def add_event(relays, event:dict=None, private_key='', kind=1, pubkey='', 
     or will be created from the passed in parameters
     """
     if not event:
-        from nostr.key import PrivateKey
+        from .key import PrivateKey
         from .event import Event
         from .util import from_nip19
         created_at = created_at or int(time.time())

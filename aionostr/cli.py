@@ -186,7 +186,7 @@ def gen():
     """
     Generate a private/public key pair
     """
-    from nostr.key import PrivateKey
+    from .key import PrivateKey
     from .util import to_nip19
 
     pk = PrivateKey()
