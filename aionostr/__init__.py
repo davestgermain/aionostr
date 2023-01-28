@@ -39,11 +39,13 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
             relays = obj[2] or relays
             if obj[0] == 'nprofile':
                 query = {"kinds": [0], "authors": [obj[1]]}
+            elif obj[0] == 'nrelay':
+                return obj[1]
             elif obj[1]:
                 query = {"ids": [obj[1]]}
                 single_event = True
             else:
-                return relays
+                raise NotImplementedError(obj[0])
     else:
         query = {"ids": [anything]}
         single_event = True

@@ -27,7 +27,10 @@ def from_nip19(nip19string: str):
                 continue
             tlv[t].append(v)
         if tlv[0]:
-            key_or_id = bytes(tlv[0][0]).hex()
+            if hrp != 'nrelay':
+                key_or_id = bytes(tlv[0][0]).hex()
+            else:
+                key_or_id = bytes(tlv[0][0]).decode()
         else:
             key_or_id = ''
         relays = []
@@ -47,7 +50,7 @@ def to_nip19(ntype: str, payload: str, relays=None):
         if ntype == 'nrelay':
             # payload is the relay url
             encoded = payload.encode()
-            data.append(1)
+            data.append(0)
             data.append(len(encoded))
             data.extend(encoded)
         else:
