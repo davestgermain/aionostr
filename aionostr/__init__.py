@@ -38,7 +38,7 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
         else:
             relays = obj['relays'] or relays
             if obj['type'] == 'nprofile':
-                query = {"kinds": [0], "authors": [obj[1]]}
+                query = {"kinds": [0], "authors": [obj['object']]}
             elif obj['type'] == 'nrelay':
                 return obj[1]
             elif obj['object']:
