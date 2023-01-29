@@ -1,5 +1,7 @@
 from .key import PublicKey, PrivateKey, bech32
 
+NIP19_PREFIXES = ('npub', 'nsec', 'note', 'nprofile', 'nevent', 'nrelay', 'nostr:')
+
 
 def from_nip19(nip19string: str):
     """
@@ -8,10 +10,17 @@ def from_nip19(nip19string: str):
     """
     hrp, data, spec = bech32.bech32_decode(nip19string)
     data = bech32.convertbits(data, 5, 8)
+    retval = {
+        'object': None,
+        'type': hrp,
+        'relays': None,
+    }
     if hrp == 'npub':
-        return PublicKey(bytes(data[:-1]))
+        retval['object'] = PublicKey(bytes(data[:-1]))
     elif hrp == 'nsec':
-        return PrivateKey(bytes(data[:-1]))
+        retval['object'] = PrivateKey(bytes(data[:-1]))
+    elif hrp == 'note':
+        retval['object'] = bytes(data[:-1]).hex()
     elif hrp in ('nevent', 'nprofile', 'nrelay'):
         tlv = {0: [], 1: []}
         while data:
@@ -35,14 +44,16 @@ def from_nip19(nip19string: str):
         relays = []
         for relay in tlv[1]:
             relays.append(bytes(relay).decode('utf8'))
-        return hrp, key_or_id, relays
+        retval['object'] = key_or_id
+        retval['relays'] = relays
+    return retval
 
 
 def to_nip19(ntype: str, payload: str, relays=None):
     """
     Encode object as nip-19 compatible string
     """
-    if ntype in ('npub', 'nsec'):
+    if ntype in ('npub', 'nsec', 'note'):
         data = bytes.fromhex(payload)
     elif ntype in ('nprofile', 'nevent', 'nrelay'):
         data = bytearray()

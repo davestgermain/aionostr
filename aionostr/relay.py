@@ -29,14 +29,14 @@ class Relay:
     """
     Interact with a relay
     """
-    def __init__(self, url, verbose=False, origin:str = ''):
+    def __init__(self, url, verbose=False, origin:str = '', private_key:str=''):
         self.url = url
         self.ws = None
         self.receive_task = None
         self.subscriptions = defaultdict(lambda: Subscription(filters=[], queue=asyncio.Queue()))
         self.event_adds = asyncio.Queue()
         self.notices = asyncio.Queue()
-        self.challenge = None
+        self.private_key = private_key
         self.verbose = verbose
         self.origin = origin or url
 
@@ -83,7 +83,7 @@ class Relay:
                 elif message[0] == 'NOTICE':
                     await self.notices.put(message[1])
                 elif message[0] == 'AUTH':
-                    self.challenge = message[1]
+                    await self.authenticate(message[1])
                 else:
                     sys.stderr.write(message)
             except asyncio.CancelledError:
@@ -119,16 +119,18 @@ class Relay:
         await self.send(["CLOSE", sub_id])
         del self.subscriptions[sub_id]
 
-    async def authenticate(self, private_key:str):
-        if not self.challenge:
-            return False
+    async def authenticate(self, challenge:str):
+        if not self.private_key:
+            import warnings
+            warnings.warn("private key required to authenticate")
+            return
         from .key import PrivateKey
-        pk = PrivateKey(bytes.fromhex(private_key))
+        pk = PrivateKey(bytes.fromhex(self.private_key))
         auth_event = Event(
             kind=22242,
             pubkey=pk.public_key.hex(),
             tags=[
-                ['challenge', self.challenge],
+                ['challenge', challenge],
                 ['relay', self.url]
             ]
         )
@@ -149,14 +151,23 @@ class Manager:
     """
     Manage a collection of relays
     """
-    def __init__(self, relays=None, verbose=False, origin='aionostr'):
-        self.relays = [Relay(r, verbose=verbose, origin=origin) for r in (relays or [])]
+    def __init__(self, relays=None, verbose=False, origin='aionostr', private_key=None):
+        self.relays = [Relay(r, verbose=verbose, origin=origin, private_key=private_key) for r in (relays or [])]
         self.subscriptions = {}
         self.connected = False
         self._connectlock = asyncio.Lock()
 
-    def add(self, url):
-        self.relays.append(Relay(url))
+    @property
+    def private_key(self):
+        return None
+
+    @private_key.setter
+    def private_key(self, pk):
+        for relay in self.relays:
+            relay.private_key = pk
+
+    def add(self, url, **kwargs):
+        self.relays.append(Relay(url, **kwargs))
 
     async def monitor_queues(self, queues, output):
         seen = set()
@@ -193,9 +204,6 @@ class Manager:
 
     async def add_event(self, event, check_response=False):
         await self.broadcast('add_event', event, check_response=check_response)
-
-    async def authenticate(self, private_key:str):
-        await self.broadcast('authenticate', private_key)
 
     async def subscribe(self, sub_id: str, *filters):
         queues = []

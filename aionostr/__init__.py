@@ -16,7 +16,7 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
     To stream events, set stream=True. This will return an asyncio.Queue to
     retrieve events from
     """
-    from .util import from_nip19
+    from .util import from_nip19, NIP19_PREFIXES
 
     query = None
     single_event = False
@@ -30,19 +30,19 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
     elif anything.strip().startswith('{'):
         from json import loads
         query = loads(anything)
-    elif anything.startswith(('nprofile', 'nevent', 'npub', 'nsec', 'nostr:', 'nrelay')):
+    elif anything.startswith(NIP19_PREFIXES):
         anything = anything.replace('nostr:', '', 1)
         obj = from_nip19(anything)
-        if not isinstance(obj, tuple):
+        if obj['type'] in ('npub', 'nsec'):
             return obj.hex()
         else:
-            relays = obj[2] or relays
-            if obj[0] == 'nprofile':
+            relays = obj['relays'] or relays
+            if obj['type'] == 'nprofile':
                 query = {"kinds": [0], "authors": [obj[1]]}
-            elif obj[0] == 'nrelay':
+            elif obj['type'] == 'nrelay':
                 return obj[1]
-            elif obj[1]:
-                query = {"ids": [obj[1]]}
+            elif obj['object']:
+                query = {"ids": [obj['object']]}
                 single_event = True
             else:
                 raise NotImplementedError(obj[0])
@@ -87,13 +87,13 @@ async def add_event(relays, event:dict=None, private_key='', kind=1, pubkey='', 
             raise Exception("Missing private key")
 
         if private_key.startswith('nsec'):
-            private_key = from_nip19(private_key).hex()
+            private_key = from_nip19(private_key)['object'].hex()
         prikey = PrivateKey(bytes.fromhex(private_key))
 
         if not pubkey:
             pubkey = prikey.public_key.hex()
         if direct_message:
-            dm_pubkey = from_nip19(direct_message).hex() if direct_message.startswith('npub') else direct_message
+            dm_pubkey = from_nip19(direct_message)['object'].hex() if direct_message.startswith('npub') else direct_message
             tags.append(['p', dm_pubkey])
             kind = 4
             content = prikey.encrypt_message(content, dm_pubkey)
@@ -102,9 +102,7 @@ async def add_event(relays, event:dict=None, private_key='', kind=1, pubkey='', 
         event_id = event.id
     else:
         event_id = event['id']
-    async with Manager(relays, verbose=verbose) as man:
-        if private_key:
-            await man.authenticate(private_key)
+    async with Manager(relays, verbose=verbose, private_key=private_key) as man:
         await man.add_event(event)
     return event_id
 
