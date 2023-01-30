@@ -2,7 +2,14 @@
 History
 =======
 
+0.11.0 (2023-01-30)
+-------------------
+
+* auto authenticate
+* support 'note' NIP-19 type
+
 0.7.0-0.8.0 (2023-01-28)
+------------------------
 
 * support for nrelay type
 
