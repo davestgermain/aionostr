@@ -34,7 +34,7 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
         anything = anything.replace('nostr:', '', 1)
         obj = from_nip19(anything)
         if obj['type'] in ('npub', 'nsec'):
-            return obj.hex()
+            return obj['object'].hex()
         else:
             relays = obj['relays'] or relays
             if obj['type'] == 'nprofile':
