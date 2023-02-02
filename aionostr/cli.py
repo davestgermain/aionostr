@@ -4,10 +4,11 @@ import click
 import asyncio
 import time
 import os
+import logging
 from functools import wraps
 from . import get_anything, add_event
 
-DEFAULT_RELAYS = os.getenv('NOSTR_RELAYS', 'wss://nostr-pub.wellorder.net,wss://brb.io,wss://relay.damus.io').split(',')
+DEFAULT_RELAYS = os.getenv('NOSTR_RELAYS', 'wss://relay.snort.social,wss://brb.io,wss://nostr.mom').split(',')
 
 
 def async_cmd(func):
@@ -75,7 +76,9 @@ async def query(ids, authors, kinds, etags, ptags, since, until, limit, query, r
 
 
 async def _get(anything, relays, verbose=False, stream=False):
-    response = await get_anything(anything, relays, verbose=verbose, stream=stream)
+    logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s %(message)s', level=logging.DEBUG if verbose else logging.WARNING)
+
+    response = await get_anything(anything, relays, stream=stream)
     if isinstance(response, str):
         click.echo(response)
     elif isinstance(response, asyncio.Queue):
@@ -124,6 +127,7 @@ async def send(content, kind, created, tags, pubkey, relays, private_key, dm, ve
         event = json.loads(sys.stdin.readline())
     else:
         event = None
+    logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s %(message)s', level=logging.DEBUG if verbose else logging.WARNING)
     event_id = await add_event(
         relays,
         event=event,
@@ -134,7 +138,6 @@ async def send(content, kind, created, tags, pubkey, relays, private_key, dm, ve
         content=content,
         tags=tags,
         direct_message=dm,
-        verbose=verbose,
     )
     click.echo(event_id)
     click.echo(to_nip19('nevent', event_id, relays))
@@ -145,16 +148,22 @@ async def send(content, kind, created, tags, pubkey, relays, private_key, dm, ve
 @click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)
 @click.option('-v', '--verbose', help='verbose results', is_flag=True, default=False)
 @click.option('-t', '--target', help='target relay', required=True)
+@click.option('--since', help='since', type=int)
 @async_cmd
-async def mirror(anything, relays, target, verbose):
+async def mirror(anything, relays, target, verbose, since):
     """
     Mirror a query from source relays to the target relay
     """
+    logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s %(message)s', level=logging.DEBUG if verbose else logging.WARNING)
+    if since:
+        import json
+        anything = json.loads(anything)
+        anything['since'] = since
     if verbose:
         click.echo(f'mirroring: {anything} from {relays} to {target}')
     from . import Manager
     async with Manager([target]) as man:
-        result_queue = await get_anything(anything, relays=relays, verbose=verbose, stream=True)
+        result_queue = await get_anything(anything, relays=relays, stream=True)
         count = 0
         while True:
             event = await result_queue.get()

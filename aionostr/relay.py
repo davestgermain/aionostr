@@ -2,6 +2,7 @@ import asyncio
 import secrets
 import time
 import sys
+import logging
 from contextlib import asynccontextmanager
 from collections import defaultdict, namedtuple
 from websockets import connect, exceptions
@@ -29,7 +30,8 @@ class Relay:
     """
     Interact with a relay
     """
-    def __init__(self, url, verbose=False, origin:str = '', private_key:str=''):
+    def __init__(self, url, verbose=False, origin:str = '', private_key:str='', connect_timeout: float=2.0, log=None):
+        self.log = log or logging.getLogger(__name__)
         self.url = url
         self.ws = None
         self.receive_task = None
@@ -37,13 +39,15 @@ class Relay:
         self.event_adds = asyncio.Queue()
         self.notices = asyncio.Queue()
         self.private_key = private_key
-        self.verbose = verbose
         self.origin = origin or url
+        self.connected = False
+        self.connect_timeout = connect_timeout
 
     async def connect(self, retries=5):
         for i in range(retries):
             try:
-                self.ws = await connect(self.url, origin=self.origin)
+                async with timeout(self.connect_timeout):
+                    self.ws = await connect(self.url, origin=self.origin)
             except:
                 await asyncio.sleep(0.2 * i)
             else:
@@ -53,17 +57,21 @@ class Relay:
         if self.receive_task is None:
             self.receive_task = asyncio.create_task(self._receive_messages())
         await asyncio.sleep(0.01)
+        self.connected = True
+        self.log.info("Connected to %s", self.url)
 
     async def reconnect(self):
         await self.connect(20)
         for sub_id, sub in self.subscriptions.items():
-            if self.verbose:
-                sys.stderr.write(f'resubscribing to {sub.filters}')
+            self.log.debug("resubscribing to %s", sub.filters)
             await self.send(["REQ", sub_id, *sub.filters])
 
     async def close(self):
-        self.receive_task.cancel()
-        await self.ws.close()
+        if self.receive_task:
+            self.receive_task.cancel()
+        if self.ws:
+            await self.ws.close()
+        self.connected = False
 
     async def _receive_messages(self):
         while True:
@@ -71,8 +79,7 @@ class Relay:
                 async with timeout(30.0):
                     message = await self.ws.recv()
 
-                if self.verbose:
-                    sys.stderr.write(message + '\n')
+                self.log.debug(message)
                 message = loads(message)
                 if message[0] == 'EVENT':
                     await self.subscriptions[message[1]].queue.put(Event(**message[2]))
@@ -151,8 +158,9 @@ class Manager:
     """
     Manage a collection of relays
     """
-    def __init__(self, relays=None, verbose=False, origin='aionostr', private_key=None):
-        self.relays = [Relay(r, verbose=verbose, origin=origin, private_key=private_key) for r in (relays or [])]
+    def __init__(self, relays=None, verbose=False, origin='aionostr', private_key=None, log=None):
+        self.log = log or logging.getLogger(__name__)
+        self.relays = [Relay(r, origin=origin, private_key=private_key, log=log) for r in (relays or [])]
         self.subscriptions = {}
         self.connected = False
         self._connectlock = asyncio.Lock()
@@ -190,14 +198,21 @@ class Manager:
     async def broadcast(self, func, *args, **kwargs):
         results = []
         for relay in self.relays:
-            results.append(await getattr(relay, func)(*args, **kwargs))
-        return results
+            results.append(asyncio.create_task(getattr(relay, func)(*args, **kwargs)))
+
+        self.log.debug("Waiting for %s", func)
+        return await asyncio.wait(results)
 
     async def connect(self):
         async with self._connectlock:
             if not self.connected:
                 await self.broadcast('connect')
                 self.connected = True
+                tried = len(self.relays)
+                connected = [relay for relay in self.relays if relay.connected]
+                success = len(connected)
+                self.relays = connected
+                self.log.debug("Connected to %d out of %d relays", success, tried)
 
     async def close(self):
         await self.broadcast('close')
