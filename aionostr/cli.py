@@ -3,6 +3,7 @@ import sys
 import click
 import asyncio
 import time
+import datetime
 import os
 import logging
 from functools import wraps
@@ -173,7 +174,7 @@ async def mirror(anything, relays, target, verbose, since):
                 click.echo(f'{event.id} from {event.pubkey}')
             else:
                 if count % 100 == 0:
-                    click.echo(f'{count}...')
+                    click.echo(f'{count}...{str(datetime.datetime.utcfromtimestamp(event.created_at))}')
         click.echo(f'{count} sent')
 
 
