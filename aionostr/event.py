@@ -120,6 +120,19 @@ class Event:
                     return False
         return verified
 
+    def has_tag(self, tag_name: str, matches: list=None) -> (bool, str):
+        """
+        Given a tag name and optional list of matches to find, return (found, match)
+        """
+        found_tag = False
+        match = None
+        for tag in self.tags:
+            if tag[0] == tag_name:
+                found_tag = True
+                if matches and len(tag) > 1 and tag[1] in matches:
+                    match = tag[1]
+        return found_tag, match
+
     def to_message(self, sub_id: str=None):
         message = ['EVENT']
         if sub_id:
