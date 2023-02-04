@@ -214,7 +214,7 @@ def gen():
 
 @main.command()
 @click.option('-r', 'relay', help='relay url', default='ws://127.0.0.1:6969')
-@click.option('-f', 'function', help='function to run')
+@click.option('-f', 'function', help='function to run', default="events_per_second")
 @click.option('-c', 'concurrency', help='concurrency', default=2)
 @async_cmd
 async def bench(relay, function, concurrency, num_events=1000):
