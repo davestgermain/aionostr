@@ -9,6 +9,14 @@ import logging
 from functools import wraps
 from . import get_anything, add_event
 
+try:
+    import uvloop
+
+    uvloop.install()
+except ImportError:
+    pass
+
+
 DEFAULT_RELAYS = os.getenv('NOSTR_RELAYS', 'wss://relay.snort.social,wss://brb.io,wss://nostr.mom').split(',')
 
 
@@ -202,6 +210,23 @@ def gen():
     pk = PrivateKey()
     click.echo(to_nip19('nsec', pk.hex()))
     click.echo(to_nip19('npub', pk.public_key.hex()))
+
+
+@main.command()
+@click.option('-r', 'relay', help='relay url', default='ws://127.0.0.1:6969')
+@click.option('-f', 'function', help='function to run')
+@click.option('-c', 'concurrency', help='concurrency', default=2)
+@async_cmd
+async def bench(relay, function, concurrency, num_events=1000):
+    from aionostr import benchmark
+    func = getattr(benchmark, function)
+
+    args = [relay]
+    click.echo(f"Adding {num_events} events to setup")
+    await benchmark.adds_per_second(relay, num_events)
+    click.echo(f"Running benchmark {function} with concurrency {concurrency}")
+    await benchmark.runner(concurrency, func, *args)
+
 
 
 if __name__ == "__main__":
