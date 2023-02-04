@@ -104,11 +104,3 @@ async def runner(concurrency, func, *args, **kwargs):
     total = sum([r.result() for r in results[0]])
     print(f"Total throughput: {total:.1f}/sec")
 
-
-
-if __name__ == "__main__":
-    import sys
-
-    # asyncio.run(concurrent_add_events('ws://localhost:6969', 1000, int(sys.argv[1])))
-    asyncio.run(concurrent_requests("ws://127.0.0.1:6969", 1000, int(sys.argv[1])))
-    # asyncio.run(get_req("ws://localhost:6969"))
