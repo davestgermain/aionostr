@@ -60,7 +60,7 @@ async def adds_per_second(url, num_events=100):
     return timer.throughput()
 
 
-async def events_per_second(url, kind=22222, limit=500):
+async def events_per_second(url, kind=22222, limit=500, duration=20):
     relay = Relay(url)
     query = {"kinds": [kind], "limit": limit}
     async with relay:
@@ -77,12 +77,14 @@ async def events_per_second(url, kind=22222, limit=500):
     )
     return timer.throughput()
 
-async def req_per_second(url, kind=22222, limit=50, count=100):
+async def req_per_second(url, kind=22222, limit=50, duration=20):
     query = {"kinds": [kind], "limit": limit}
     relay = Relay(url)
     async with relay:
+        stoptime = perf_counter() + duration
+        i = 0
         with catchtime() as timer:
-            for i in range(count):
+            while perf_counter() < stoptime:
                 queue = await relay.subscribe(f"bench{i}", query)
                 while True:
                     event = await queue.get()
@@ -90,8 +92,9 @@ async def req_per_second(url, kind=22222, limit=50, count=100):
                         break
                 timer += 1
                 await relay.unsubscribe(f"bench{i}")
+                i += 1
     print(
-        f"\tReq: took {timer.duration:.2f} seconds. {timer.throughput():.1f}/sec {timer.count}"
+        f"\tReq: {timer.count} iterations. {timer.throughput():.1f}/sec"
     )
     return timer.throughput()
 

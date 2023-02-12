@@ -2,6 +2,12 @@
 History
 =======
 
+0.16.0 (2023-02-11)
+-------------------
+
+* Improve benchmark
+* Allow manager to authenticate
+
 0.11.0 (2023-01-30)
 -------------------
 

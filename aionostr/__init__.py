@@ -8,7 +8,7 @@ import time
 from .relay import Manager, Relay
 
 
-async def get_anything(anything:str, relays=None, verbose=False, stream=False, origin='aionostr'):
+async def get_anything(anything:str, relays=None, verbose=False, stream=False, origin='aionostr', private_key=None):
     """
     Return anything from the nostr network
     anything: event id, nprofile, nevent, npub, nsec, or query
@@ -56,7 +56,7 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
         if not relays:
             raise NotImplementedError("No relays to use")
 
-        man = Manager(relays, verbose=verbose, origin=origin)
+        man = Manager(relays, verbose=verbose, origin=origin, private_key=private_key)
         if not stream:
             async with man:
                 return [event async for event in man.get_events(query, single_event=single_event, only_stored=True)]
@@ -103,7 +103,7 @@ async def add_event(relays, event:dict=None, private_key='', kind=1, pubkey='', 
     else:
         event_id = event['id']
     async with Manager(relays, verbose=verbose, private_key=private_key) as man:
-        await man.add_event(event)
+        await man.add_event(event, check_response=True)
     return event_id
 
 

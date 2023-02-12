@@ -87,7 +87,7 @@ async def query(ids, authors, kinds, etags, ptags, since, until, limit, query, r
 async def _get(anything, relays, verbose=False, stream=False):
     logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s %(message)s', level=logging.DEBUG if verbose else logging.WARNING)
 
-    response = await get_anything(anything, relays, stream=stream)
+    response = await get_anything(anything, relays, stream=stream, private_key=os.getenv("NOSTR_KEY"))
     if isinstance(response, str):
         click.echo(response)
     elif isinstance(response, asyncio.Queue):
@@ -216,14 +216,16 @@ def gen():
 @click.option('-r', 'relay', help='relay url', default='ws://127.0.0.1:6969')
 @click.option('-f', 'function', help='function to run', default="events_per_second")
 @click.option('-c', 'concurrency', help='concurrency', default=2)
+@click.option('-s', '--setup/--no-setup', help='add events to setup', is_flag=True, default=True)
 @async_cmd
-async def bench(relay, function, concurrency, num_events=1000):
+async def bench(relay, function, concurrency, setup, num_events=1000):
     from aionostr import benchmark
     func = getattr(benchmark, function)
 
     args = [relay]
-    click.echo(f"Adding {num_events} events to setup")
-    await benchmark.adds_per_second(relay, num_events)
+    if setup:
+        click.echo(f"Adding {num_events} events to setup")
+        await benchmark.adds_per_second(relay, num_events)
     click.echo(f"Running benchmark {function} with concurrency {concurrency}")
     await benchmark.runner(concurrency, func, *args)
 
