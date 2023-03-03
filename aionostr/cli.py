@@ -40,6 +40,8 @@ def main(args=None):
 @click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)
 @click.option('-s', '--stream', help='stream results', is_flag=True, default=False)
 @click.option('-v', '--verbose', help='verbose results', is_flag=True, default=False)
+@click.option('-p', '--pretty', help='pretty print results', is_flag=True, default=False)
+@click.option('-c', '--content', help='only show content of events', is_flag=True, default=False)
 @click.option('-q', '--query', help='query json')
 @click.option('--ids', help='ids')
 @click.option('--authors', help='authors')
@@ -50,7 +52,7 @@ def main(args=None):
 @click.option('--until', help='until')
 @click.option('--limit', help='limit')
 @async_cmd
-async def query(ids, authors, kinds, etags, ptags, since, until, limit, query, relays, stream, verbose):
+async def query(ids, authors, kinds, etags, ptags, since, until, limit, query, relays, stream, verbose, pretty, content):
     """
     Run a query once and print events
     """
@@ -80,35 +82,52 @@ async def query(ids, authors, kinds, etags, ptags, since, until, limit, query, r
     if not query:
         click.echo("some type of query is required")
         return -1
-    await _get(query, relays, verbose=verbose, stream=stream)
+    await _get(query, relays, verbose=verbose, stream=stream, pretty=pretty, content=content)
 
 
 
-async def _get(anything, relays, verbose=False, stream=False):
+async def _get(anything, relays, verbose=False, stream=False, content=False, pretty=False):
+    import json
     logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s %(message)s', level=logging.DEBUG if verbose else logging.WARNING)
 
     response = await get_anything(anything, relays, stream=stream, private_key=os.getenv("NOSTR_KEY"))
     if isinstance(response, str):
         click.echo(response)
+        return
     elif isinstance(response, asyncio.Queue):
-        while True:
-            event = await response.get()
-            click.echo(event)
+        async def iterator():
+            while True:
+                event = await response.get()
+                yield event
     else:
-        for event in response:
+        async def iterator():
+            for event in response:
+                yield event
+    async for event in iterator():
+        if content:
+            click.echo(event.content)
+        elif pretty:
+            click.echo(
+                click.style(
+                    json.dumps(event.to_json_object(), indent=4), fg="red"
+                )
+            )
+        else:
             click.echo(event)
 
 
 @main.command()
 @click.argument("anything")
 @click.option('-r', 'relays', help='relay url', multiple=True, default=DEFAULT_RELAYS)
+@click.option('-c', '--content', help='only show content of events', is_flag=True, default=False)
+@click.option('-p', '--pretty', help='pretty print results', is_flag=True, default=False)
 @click.option('-v', '--verbose', help='verbose results', is_flag=True, default=False)
 @async_cmd
-async def get(anything, relays, verbose, stream=False):
+async def get(anything, relays, verbose, stream=False, content=False, pretty=False):
     """
     Get any nostr event
     """
-    await _get(anything, relays, verbose=verbose, stream=stream)
+    await _get(anything, relays, verbose=verbose, stream=stream, content=content, pretty=pretty)
 
 
 @main.command()
