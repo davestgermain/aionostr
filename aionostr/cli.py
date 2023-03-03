@@ -190,8 +190,9 @@ async def mirror(anything, relays, target, verbose, since):
     if verbose:
         click.echo(f'mirroring: {anything} from {relays} to {target}')
     from . import Manager
-    async with Manager([target]) as man:
-        result_queue = await get_anything(anything, relays=relays, stream=True)
+    private_key = os.getenv("NOSTR_KEY")
+    async with Manager([target], private_key=private_key) as man:
+        result_queue = await get_anything(anything, relays=relays, stream=True, private_key=private_key)
         count = 0
         while True:
             event = await result_queue.get()

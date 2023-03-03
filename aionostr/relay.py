@@ -132,7 +132,11 @@ class Relay:
             warnings.warn("private key required to authenticate")
             return
         from .key import PrivateKey
-        pk = PrivateKey(bytes.fromhex(self.private_key))
+        if self.private_key.startswith('nsec'):
+            from .util import from_nip19
+            pk = from_nip19(self.private_key)['object']
+        else:
+            pk = PrivateKey(bytes.fromhex(self.private_key))
         auth_event = Event(
             kind=22242,
             pubkey=pk.public_key.hex(),
