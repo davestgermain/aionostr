@@ -40,7 +40,15 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
             if obj['type'] == 'nprofile':
                 query = {"kinds": [0], "authors": [obj['object']]}
             elif obj['type'] == 'nrelay':
-                return obj[1]
+                return obj['object']
+            elif obj['type'] == 'naddr':
+                query = {
+                    '#d': [obj['object']],
+                }
+                if 'kind' in obj:
+                    query['kinds'] = [obj['kind']]
+                if 'author' in obj:
+                    query['authors'] = [obj['author']]
             elif obj['object']:
                 query = {"ids": [obj['object']]}
                 single_event = True

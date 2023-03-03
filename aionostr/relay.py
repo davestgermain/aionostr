@@ -218,7 +218,7 @@ class Manager:
         await self.broadcast('close')
 
     async def add_event(self, event, check_response=False):
-        await self.broadcast('add_event', event, check_response=check_response)
+        return await self.broadcast('add_event', event, check_response=check_response)
 
     async def subscribe(self, sub_id: str, *filters):
         queues = []
