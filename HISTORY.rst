@@ -2,6 +2,12 @@
 History
 =======
 
+0.18.0 (2023-03-03)
+-------------------
+
+* Allow for pretty-printing events, or just printing the content
+* Enable authentication when mirroring
+
 0.17.0 (2023-03-03)
 -------------------
 
