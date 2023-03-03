@@ -2,7 +2,7 @@
 
 __author__ = """Dave St.Germain"""
 __email__ = 'dave@st.germa.in'
-__version__ = '0.17.0'
+__version__ = '0.17.1'
 
 import time
 from .relay import Manager, Relay

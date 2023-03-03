@@ -52,6 +52,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/davestgermain/aionostr',
-    version='0.17.0',
+    version='0.17.1',
     zip_safe=False,
 )
