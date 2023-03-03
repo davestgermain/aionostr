@@ -42,9 +42,9 @@ async def get_anything(anything:str, relays=None, verbose=False, stream=False, o
             elif obj['type'] == 'nrelay':
                 return obj['object']
             elif obj['type'] == 'naddr':
-                query = {
-                    '#d': [obj['object']],
-                }
+                query = {}
+                if obj['object']:
+                    query['#d'] = [obj['object']],
                 if 'kind' in obj:
                     query['kinds'] = [obj['kind']]
                 if 'author' in obj:
