@@ -2,6 +2,12 @@
 History
 =======
 
+0.19.0 (2023.03.07)
+-------------------
+
+* Improved benchmark: `aionostr bench`
+* Optimized Event object
+
 0.18.0 (2023-03-03)
 -------------------
 

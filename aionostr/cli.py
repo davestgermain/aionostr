@@ -246,6 +246,7 @@ async def bench(relay, function, concurrency, setup, num_events=1000):
     if setup:
         click.echo(f"Adding {num_events} events to setup")
         await benchmark.adds_per_second(relay, num_events)
+        await asyncio.sleep(1.0)
     click.echo(f"Running benchmark {function} with concurrency {concurrency}")
     await benchmark.runner(concurrency, func, *args)
 

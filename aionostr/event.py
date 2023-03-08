@@ -27,6 +27,16 @@ class EventKind(IntEnum):
 
 
 class Event:
+    __slots__ = (
+        "id",
+        "pubkey",
+        "created_at",
+        "kind",
+        "content",
+        "tags",
+        "sig",
+    )
+
     def __init__(
             self,
             pubkey: str='', 
@@ -74,21 +84,6 @@ class Event:
     @staticmethod
     def compute_id(public_key: str, created_at: int, kind: int, tags: "list[list[str]]", content: str) -> str:
         return sha256(Event.serialize(public_key, created_at, kind, tags, content)).hexdigest()
-
-    @staticmethod
-    def from_tuple(row):
-        tags = row[4]
-        if isinstance(tags, str):
-            tags = loads(tags)
-        return Event(
-            id=row[0].hex(),
-            created_at=row[1],
-            kind=row[2],
-            pubkey=row[3].hex(),
-            tags=tags,
-            sig=row[5].hex(),
-            content=row[6],
-        )
 
     def sign(self, private_key_hex: str) -> None:
         sk = PrivateKey(bytes.fromhex(private_key_hex))
@@ -139,17 +134,6 @@ class Event:
             message.append(sub_id)
         message.append(self.to_json_object())
         return dumps(message)
-
-    def to_tuple(self):
-        return (
-            self.id,
-            self.pubkey,
-            self.created_at,
-            self.kind,
-            dumps(self.tags),
-            self.content,
-            self.sig
-        )
 
     def __str__(self):
         return dumps(self.to_json_object())
