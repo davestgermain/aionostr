@@ -4,17 +4,19 @@ forked from https://github.com/jeffthibault/python-nostr.git
 import time
 import functools
 from enum import IntEnum
-from secp256k1 import PrivateKey, PublicKey
+from coincurve import PrivateKey, PublicKeyXOnly as PublicKey
 from hashlib import sha256
 
 try:
     import rapidjson
+
     loads = rapidjson.loads
     dumps = functools.partial(rapidjson.dumps, ensure_ascii=False)
 except ImportError:
     import json
+
     loads = json.loads
-    dumps = functools.partial(json.dumps, separators=(',', ':'), ensure_ascii=False)
+    dumps = functools.partial(json.dumps, separators=(",", ":"), ensure_ascii=False)
 
 
 class EventKind(IntEnum):
@@ -38,17 +40,18 @@ class Event:
     )
 
     def __init__(
-            self,
-            pubkey: str='', 
-            content: str='', 
-            created_at: int=0, 
-            kind: int=EventKind.TEXT_NOTE, 
-            tags: "list[list[str]]"=[], 
-            id: str=None,
-            sig: str=None) -> None:
+        self,
+        pubkey: str = "",
+        content: str = "",
+        created_at: int = 0,
+        kind: int = EventKind.TEXT_NOTE,
+        tags: "list[list[str]]" = [],
+        id: str = None,
+        sig: str = None,
+    ) -> None:
         if not isinstance(content, str):
             raise TypeError("Argument 'content' must be of type str")
-        
+
         self.pubkey = pubkey
         self.content = content
         self.created_at = created_at or int(time.time())
@@ -56,7 +59,9 @@ class Event:
         self.tags = tags
         self.sig = sig
         if not id:
-            id = Event.compute_id(self.pubkey, self.created_at, self.kind, self.tags, self.content)
+            id = Event.compute_id(
+                self.pubkey, self.created_at, self.kind, self.tags, self.content
+            )
         self.id = id
 
     @property
@@ -76,46 +81,63 @@ class Event:
         return self.kind >= 30000 and self.kind < 40000
 
     @staticmethod
-    def serialize(public_key: str, created_at: int, kind: int, tags: "list[list[str]]", content: str) -> bytes:
+    def serialize(
+        public_key: str,
+        created_at: int,
+        kind: int,
+        tags: "list[list[str]]",
+        content: str,
+    ) -> bytes:
         data = [0, public_key, created_at, kind, tags, content]
         data_str = dumps(data)
         return data_str.encode()
 
     @staticmethod
-    def compute_id(public_key: str, created_at: int, kind: int, tags: "list[list[str]]", content: str) -> str:
-        return sha256(Event.serialize(public_key, created_at, kind, tags, content)).hexdigest()
+    def compute_id(
+        public_key: str,
+        created_at: int,
+        kind: int,
+        tags: "list[list[str]]",
+        content: str,
+    ) -> str:
+        return sha256(
+            Event.serialize(public_key, created_at, kind, tags, content)
+        ).hexdigest()
 
     def sign(self, private_key_hex: str) -> None:
         sk = PrivateKey(bytes.fromhex(private_key_hex))
-        sig = sk.schnorr_sign(bytes.fromhex(self.id), None, raw=True)
+        sig = sk.sign_schnorr(bytes.fromhex(self.id), None)
         self.sig = sig.hex()
 
     def verify(self) -> bool:
         try:
-            pub_key = PublicKey(bytes.fromhex("02" + self.pubkey), True) # add 02 for schnorr (bip340)
+            pub_key = PublicKey(bytes.fromhex(self.pubkey))
         except Exception as e:
             return False
-        event_id = Event.compute_id(self.pubkey, self.created_at, self.kind, self.tags, self.content)
-        verified = pub_key.schnorr_verify(bytes.fromhex(event_id), bytes.fromhex(self.sig), None, raw=True)
+        event_id = Event.compute_id(
+            self.pubkey, self.created_at, self.kind, self.tags, self.content
+        )
+
+        verified = pub_key.verify(
+            bytes.fromhex(self.sig),
+            bytes.fromhex(event_id),
+        )
         for tag in self.tags:
-            if tag[0] == 'delegation':
+            if tag[0] == "delegation":
                 # verify delegation signature
                 _, delegator, conditions, sig = tag
-                to_sign = (':'.join(['nostr', 'delegation', self.pubkey, conditions])).encode('utf8')
-                delegation_verified = PublicKey(
-                    bytes.fromhex("02" + delegator),
-                    True
-                ).schnorr_verify(
-                    sha256(to_sign).digest(),
+                to_sign = (
+                    ":".join(["nostr", "delegation", self.pubkey, conditions])
+                ).encode("utf8")
+                delegation_verified = PublicKey(bytes.fromhex(delegator)).verify(
                     bytes.fromhex(sig),
-                    None,
-                    raw=True
+                    sha256(to_sign).digest(),
                 )
                 if not delegation_verified:
                     return False
         return verified
 
-    def has_tag(self, tag_name: str, matches: list=None) -> (bool, str):
+    def has_tag(self, tag_name: str, matches: list = None) -> (bool, str):
         """
         Given a tag name and optional list of matches to find, return (found, match)
         """
@@ -128,8 +150,8 @@ class Event:
                     match = tag[1]
         return found_tag, match
 
-    def to_message(self, sub_id: str=None):
-        message = ['EVENT']
+    def to_message(self, sub_id: str = None):
+        message = ["EVENT"]
         if sub_id:
             message.append(sub_id)
         message.append(self.to_json_object())
@@ -146,5 +168,5 @@ class Event:
             "kind": self.kind,
             "tags": self.tags,
             "content": self.content,
-            "sig": self.sig
+            "sig": self.sig,
         }

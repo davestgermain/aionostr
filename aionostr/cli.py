@@ -17,7 +17,7 @@ except ImportError:
     pass
 
 
-DEFAULT_RELAYS = os.getenv('NOSTR_RELAYS', 'wss://relay.snort.social,wss://brb.io,wss://nostr.mom').split(',')
+DEFAULT_RELAYS = os.getenv('NOSTR_RELAYS', 'wss://nos.lol,wss://nostr.mom').split(',')
 
 
 def async_cmd(func):
