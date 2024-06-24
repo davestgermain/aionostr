@@ -37,6 +37,13 @@ class PublicKey:
         return cls(bytes(raw_public_key))
 
 
+    @classmethod
+    def from_hex(cls, hex_string: str):
+        """ Load a PublicKey from its hex string form """
+        raw_bytes = bytes.fromhex(hex_string)
+        return cls(raw_bytes)
+    
+    
 class PrivateKey:
     def __init__(self, raw_secret: bytes = None) -> None:
         if not raw_secret is None:
